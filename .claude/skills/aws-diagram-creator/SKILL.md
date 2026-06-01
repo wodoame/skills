@@ -5,207 +5,164 @@ description: Create or edit clean, professional AWS architecture diagrams as dra
 
 # AWS Diagram Creator
 
-Create and edit clean, professional AWS architecture diagrams saved as `.drawio` files. Use the draw.io XML format (mxGraph) with official AWS shape libraries.
+Produce neat, uncluttered AWS architecture diagrams as **draw.io (`.drawio`) files**. The
+output is always a single `.drawio` file the user opens in draw.io / the VS Code Draw.io
+extension. Derive the architecture from whatever the user points at (CloudFormation /
+Terraform / prose) and ask when something is genuinely ambiguous.
 
-## Core Workflow
+## Non-negotiable preferences
 
-1. Ask the user what they want to diagram if no description is given.
-2. Ask clarifying questions about scope: which AWS services, how they connect, and any groupings (VPCs, AZs, accounts).
-3. Ask if there is an existing `.drawio` file to update, or if this is a new diagram.
-4. Generate or update the `.drawio` XML file.
-5. Summarize what was created: components, connections, and groups.
+These come from the user directly. Honor them by default on every diagram.
 
-## File Format
+1. **Output is a `.drawio` file.** Never deliver an image or ASCII as the deliverable.
+2. **Clean and easy on the eye.** Light, pastel container backgrounds; no walls of deep
+   color. Let the small AWS service icons carry the only saturated color.
+3. **Minimal text.** Only the text needed to explain an operation. No verbose annotations
+   on the canvas. Use short edge labels (`:8080`, `trigger`, `deploy`, `pull image`).
+4. **All text is independent, freely-movable text boxes.** Nodes and edges carry an empty
+   `value=""`. Every label — node names, container titles, edge labels — is its own
+   `text;html=1;strokeColor=none;fillColor=none;...` cell positioned near its target. The
+   user wants to drag any text freely without moving the shape. (Trade-off they accept:
+   moving a node does not move its label.)
+5. **Edge labels never sit on the arrow.** Place each label off the line — above for
+   horizontal segments, to the side for vertical ones. With decoupled text boxes (pref #4)
+   this is automatic; if ever using real edge labels, add an `<mxPoint ... as="offset"/>`.
+6. **Rounded containers.** AWS Cloud, VPC, AZs, subnets, and logical boundaries use
+   `rounded=1;absoluteArcSize=1;arcSize=16-24`. Do **not** rely on `shape=mxgraph.aws4.group`
+   for the border — that shape draws square corners and ignores `rounded`. Use plain
+   rounded rectangles with the colors below.
+7. **Consolidate to reduce clutter.** Collapse repetitive resources into one labeled node
+   (e.g. 6 interface VPC endpoints → one "VPC Endpoints" node per AZ listing the services).
+8. **Security groups as a compact legend box**, not separate shapes on the canvas, unless
+   the user asks otherwise.
 
-Draw.io files are XML. The root structure:
+## Use the CURRENT (2023) AWS resource icons — not the old flat ones
+
+This is a hard requirement from the user: use the **current draw.io AWS icon set** (refreshed
+2023-01-31), not the older flat-fill icons. The current resource icons are a rounded square
+with a **vertical gradient** (lighter at the top, darker — almost black — at the bottom) and a
+**white** glyph. That light-to-dark gradient is the "pink and black" look the user expects;
+a flat single `fillColor` with `gradientColor=none` looks washed out and is the outdated style
+to avoid.
+
+**Current resourceIcon style template** (fill these in per service):
+
+```
+sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=<LIGHT>;gradientDirection=north;fillColor=<DARK>;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.<name>
+```
+
+Keep `strokeColor=#ffffff` (the standard white glyph). `gradientDirection=north` puts the
+light shade on top.
+
+### resIcon name gotchas (verified)
+
+Some `resIcon` values render as a blank colored square (no glyph). The 2023 refresh also
+renamed several icons with a `_2` suffix. Verified working choices:
+
+| Need            | DO NOT use                            | USE instead                                          |
+|-----------------|---------------------------------------|------------------------------------------------------|
+| IAM role        | `identity_and_access_management_iam`  | `shape=mxgraph.aws4.role` (flat icon, ~78×44, no resIcon) |
+| S3 bucket       | `simple_storage_service`              | `resIcon=mxgraph.aws4.s3`                             |
+| CloudWatch      | `cloudwatch`                          | `resIcon=mxgraph.aws4.cloudwatch_2`                  |
+| Auto Scaling    | `application_auto_scaling`            | `shape=mxgraph.aws4.auto_scaling2` (flat, no resIcon) |
+
+Names confirmed to render fine as-is: `elastic_container_registry`, `fargate`, `eventbridge`,
+`codepipeline`, `codedeploy`, `application_load_balancer`, `nat_gateway`, `internet_gateway`,
+`endpoints`, `cloudwatch_alarm`.
+
+When unsure whether an icon renders, keep the node `id` stable so attached edges/labels survive
+an icon swap. If one renders blank, tell the user and offer to let them drop the correct icon
+in from the draw.io shape picker (they often paste one near the bad node); then copy that
+cell's `shape`/`resIcon` onto the original cell and delete the placeholder. Flat icons like
+`role` and `auto_scaling2` are symbol-only (no gradient tile) and render their glyph in
+`fillColor`.
+
+## Visual style reference
+
+**Containers** (plain rounded rectangles, label as separate text box):
+- AWS Cloud — `strokeColor=#232F3E;fillColor=none;arcSize=24`
+- VPC — `strokeColor=#8C4FFF;fillColor=none;arcSize=20`
+- Availability Zone — `dashed=1;dashPattern=8 6;strokeColor=#147EBA;fillColor=none;arcSize=18`
+- Public subnet — `strokeColor=#7AA116;fillColor=#E9F3E6;arcSize=16`
+- Private subnet — `strokeColor=#00A4A6;fillColor=#E6F6F7;arcSize=16`
+- Logical service boundary (e.g. ECS Service) — `dashed=1;dashPattern=6 4;strokeColor=#ED7100;fillColor=none;arcSize=16`
+
+**Icon category gradient pairs** — `fillColor` (DARK, bottom) / `gradientColor` (LIGHT, top),
+verified against current draw.io diagrams:
+- Compute / Containers (ECR, ECS, Fargate, EC2) — `#D05C17` / `#F78E04` (orange)
+- Networking & Content Delivery (ALB, NAT, IGW, endpoints, CloudFront) — `#5A30B5` / `#945DF2` (purple)
+- Storage (S3) — `#277116` / `#60A337` (green)
+- Security, Identity & Compliance (IAM) — `#C7131F` / `#F54749` (red)
+- Management & Governance (CloudWatch, alarms) — `#BC1356` / `#F34482` (pink)
+- Application Integration (EventBridge, SNS, SQS, Step Functions) — `#BC1356` / `#FF4F8B` (pink; note the lighter top differs from Management)
+- Developer Tools (CodePipeline, CodeDeploy, CodeBuild) — `#3334B9` / `#4D72F3` (blue)
+
+(Group/container border colors below are separate from these icon colors and unchanged.)
+
+**Edges** — `edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=block;endFill=1`:
+- Primary flow — `strokeColor=#5A6B7B;strokeWidth=1.5`
+- Secondary/util (logs, scaling, artifacts) — `strokeColor=#9AA5B1;strokeWidth=1.2`
+- PrivateLink / VPC-endpoint paths — `dashed=1;strokeColor=#8C4FFF`
+- OIDC / IAM trust — `dashed=1;strokeColor=#DD344C`
+- Keep the node `id` on both ends (`source=`/`target=`) so edges reflow when nodes move.
+  Detached edges with fixed `sourcePoint`/`targetPoint` drift and mis-route — reattach them.
+
+**Text boxes** — `text;html=1;strokeColor=none;fillColor=none;align=center;whiteSpace=wrap;fontSize=11;fontColor=<match>`.
+Node labels sit ~2px below the icon; container titles top-left inside; edge labels at the
+segment midpoint, offset off the line. Match label `fontColor` to its edge/zone color.
+
+## Modeling guidance
+
+- **Service-level vs per-resource arrows.** Operations that act on a *service* (CodeDeploy
+  blue/green, Auto Scaling, CloudWatch logs for ECS) point at a single **service boundary**
+  enclosing the tasks — not at one arbitrary task. Per-instance flows (ALB → each task,
+  task → its AZ's VPC endpoints) connect to the individual resources. Avoid the lopsided
+  look of a service-level arrow touching only one of several identical resources.
+- **Multi-AZ** infra: show two AZs side by side, each with public (NAT, ALB span) and private
+  (tasks, endpoints) subnets.
+- **CI/CD** typically flows left→right across the top; the request path flows top→bottom into
+  the VPC. Keep the two from tangling.
+
+## Starter template
+
+Begin from a known-good skeleton and adapt. Layer order: containers first (back), then
+icons, then edges, then all text boxes (front). Keep `pageWidth`/`pageHeight` generous.
 
 ```xml
 <mxfile host="app.diagrams.net">
-  <diagram name="Architecture">
-    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+  <diagram id="arch" name="Architecture">
+    <mxGraphModel dx="1400" dy="900" grid="0" pageWidth="2000" pageHeight="1240" math="0" shadow="0">
       <root>
-        <mxCell id="0" />
-        <mxCell id="1" parent="0" />
-        <!-- diagram elements go here -->
+        <mxCell id="0" /><mxCell id="1" parent="0" />
+        <!-- containers (rounded rects) -->
+        <!-- icons (value="") -->
+        <!-- edges (value="", source/target by id) -->
+        <!-- free-floating text boxes -->
       </root>
     </mxGraphModel>
   </diagram>
 </mxfile>
 ```
 
-Every element is an `mxCell`. Use sequential numeric IDs starting from 2. Always set `parent="1"` for top-level elements, or `parent="<container-id>"` when placing elements inside a group.
+A full reference implementation following all of the above lives in this user's project
+`BEM13-lab2-ecs-cicd/architecture.drawio` — consult it for concrete cell styles when in doubt.
 
-## AWS Shape Styles
+## Maintenance
 
-Use the official AWS 4 shape library. Shapes follow the pattern `shape=mxgraph.aws4.<service>`.
+This skill is a living document. **Whenever the user gives new feedback about how they want
+AWS diagrams done** (a color, an icon fix, a layout rule, a text convention), update this
+file so the preference persists. Treat the user's word as authoritative over the defaults
+written here.
 
-### Common shapes
+## References
 
-| Service | Style value |
-|---|---|
-| EC2 instance | `shape=mxgraph.aws4.instance` |
-| EC2 Auto Scaling | `shape=mxgraph.aws4.auto_scaling` |
-| Lambda | `shape=mxgraph.aws4.lambda` |
-| S3 | `shape=mxgraph.aws4.s3` |
-| RDS | `shape=mxgraph.aws4.rds` |
-| DynamoDB | `shape=mxgraph.aws4.dynamodb` |
-| ElastiCache | `shape=mxgraph.aws4.elasticache` |
-| API Gateway | `shape=mxgraph.aws4.api_gateway` |
-| CloudFront | `shape=mxgraph.aws4.cloudfront` |
-| Route 53 | `shape=mxgraph.aws4.route_53` |
-| Load Balancer (ALB) | `shape=mxgraph.aws4.application_load_balancer` |
-| VPC | `shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_vpc` |
-| Subnet | `shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_subnet` |
-| Security Group | `shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_security_group` |
-| Availability Zone | `shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_availability_zone` |
-| AWS Account | `shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_account` |
-| IAM | `shape=mxgraph.aws4.identity_and_access_management` |
-| SNS | `shape=mxgraph.aws4.sns` |
-| SQS | `shape=mxgraph.aws4.sqs` |
-| CloudWatch | `shape=mxgraph.aws4.cloudwatch` |
-| ECS | `shape=mxgraph.aws4.ecs` |
-| EKS | `shape=mxgraph.aws4.eks` |
-| ECR | `shape=mxgraph.aws4.ecr` |
-| Fargate | `shape=mxgraph.aws4.fargate` |
-| Secrets Manager | `shape=mxgraph.aws4.secrets_manager` |
-| Cognito | `shape=mxgraph.aws4.cognito` |
-| WAF | `shape=mxgraph.aws4.waf` |
-| Internet Gateway | `shape=mxgraph.aws4.internet_gateway` |
-| NAT Gateway | `shape=mxgraph.aws4.nat_gateway` |
-| Direct Connect | `shape=mxgraph.aws4.direct_connect` |
-| VPN | `shape=mxgraph.aws4.vpn` |
-| Kinesis | `shape=mxgraph.aws4.kinesis` |
-| Glue | `shape=mxgraph.aws4.glue` |
-| Athena | `shape=mxgraph.aws4.athena` |
-| Redshift | `shape=mxgraph.aws4.redshift` |
-| Step Functions | `shape=mxgraph.aws4.step_functions` |
-| EventBridge | `shape=mxgraph.aws4.eventbridge` |
-| CodePipeline | `shape=mxgraph.aws4.codepipeline` |
-| CodeBuild | `shape=mxgraph.aws4.codebuild` |
-| Elastic Beanstalk | `shape=mxgraph.aws4.elastic_beanstalk` |
-| Internet (generic) | `shape=mxgraph.aws4.internet_alt1` |
-| User / Client | `shape=mxgraph.aws4.users` |
-| Mobile client | `shape=mxgraph.aws4.mobile_client` |
+Provenance for the current (2023) icon styles and verified category gradient pairs above:
 
-Full node style for a service icon:
-```
-outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#E7157B;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.lambda;
-```
-
-Adjust `fillColor` per AWS category colour (see below).
-
-## AWS Category Colours
-
-| Category | Fill colour |
-|---|---|
-| Compute (EC2, Lambda, ECS…) | `#ED7100` |
-| Storage (S3, EBS…) | `#3F8624` |
-| Database (RDS, DynamoDB…) | `#C7131F` |
-| Networking (VPC, Route 53, CF…) | `#8C4FFF` |
-| Security (IAM, WAF, Cognito…) | `#DD344C` |
-| Messaging (SNS, SQS, EventBridge…) | `#E7157B` |
-| Analytics (Kinesis, Glue, Athena…) | `#8C4FFF` |
-| Developer Tools (CodePipeline…) | `#C7131F` |
-| Management (CloudWatch…) | `#E7157B` |
-
-## Groups and Containers
-
-Groups (VPC, Subnet, AZ, Account) are swimlane-style containers. Set `vertex="1"` and include child elements with `parent="<group-id>"`.
-
-```xml
-<!-- VPC container -->
-<mxCell id="10" value="VPC (10.0.0.0/16)" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_vpc;strokeColor=#8C4FFF;fillColor=#F4ECFF;verticalLabelPosition=top;verticalAlign=bottom;align=center;html=1;fontSize=13;fontStyle=1;" vertex="1" parent="1">
-  <mxGeometry x="160" y="160" width="640" height="400" as="geometry" />
-</mxCell>
-
-<!-- Public Subnet inside VPC -->
-<mxCell id="11" value="Public Subnet" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_subnet;strokeColor=#3F8624;fillColor=#EBF5E0;verticalLabelPosition=top;verticalAlign=bottom;align=center;html=1;fontSize=12;" vertex="1" parent="10">
-  <mxGeometry x="40" y="60" width="260" height="280" as="geometry" />
-</mxCell>
-```
-
-## Edges (Connections)
-
-```xml
-<mxCell id="50" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="20" target="21" parent="1">
-  <mxGeometry relative="1" as="geometry" />
-</mxCell>
-```
-
-Add a label to an edge by setting `value="HTTPS"` on the mxCell. Use `dashed=1;` in the style for optional or async paths.
-
-## Layout Conventions
-
-- **Left to right**: client/internet → edge (CloudFront, Route 53) → load balancer → compute → data stores
-- **Top to bottom** inside groups when showing tiers
-- Align icons on a grid (snap to 80 px or 160 px increments)
-- Group related services inside containers before placing unrelated icons next to them
-- Leave at least 40 px padding between a container border and its children
-- Keep icon size at 60×60 for services; 78×78 for prominent services
-- Label every icon; use short names (e.g. "ALB", "Lambda – auth", "RDS Primary")
-- Place the label below the icon (`verticalLabelPosition=bottom;verticalAlign=top;`)
-
-## Interaction Rules
-
-- Always write the complete `.drawio` file — never partial fragments.
-- When editing an existing file, read it first with the Read tool, then produce the updated full file.
-- Ask before adding services the user did not mention.
-- If a requested AWS service has no official shape, use the generic resource shape: `shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.general`.
-- After writing the file, summarize: number of services, groups, and connections added or changed.
-- If the user asks for a specific layout (e.g. "make it horizontal"), honour it over these defaults.
-
-## Example Minimal Diagram
-
-A simple Lambda + API Gateway + DynamoDB pattern:
-
-```xml
-<mxfile host="app.diagrams.net">
-  <diagram name="Serverless API">
-    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
-      <root>
-        <mxCell id="0" />
-        <mxCell id="1" parent="0" />
-
-        <!-- Client -->
-        <mxCell id="2" value="Client" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#232F3E;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.users;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="1">
-          <mxGeometry x="80" y="320" width="60" height="60" as="geometry" />
-        </mxCell>
-
-        <!-- API Gateway -->
-        <mxCell id="3" value="API Gateway" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#E7157B;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.api_gateway;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="1">
-          <mxGeometry x="240" y="320" width="60" height="60" as="geometry" />
-        </mxCell>
-
-        <!-- Lambda -->
-        <mxCell id="4" value="Lambda" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#ED7100;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.lambda;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="1">
-          <mxGeometry x="400" y="320" width="60" height="60" as="geometry" />
-        </mxCell>
-
-        <!-- DynamoDB -->
-        <mxCell id="5" value="DynamoDB" style="outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#C7131F;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.dynamodb;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="1">
-          <mxGeometry x="560" y="320" width="60" height="60" as="geometry" />
-        </mxCell>
-
-        <!-- Edges -->
-        <mxCell id="6" style="edgeStyle=orthogonalEdgeStyle;html=1;" edge="1" source="2" target="3" parent="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="7" value="HTTPS" style="edgeStyle=orthogonalEdgeStyle;html=1;" edge="1" source="3" target="4" parent="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="8" style="edgeStyle=orthogonalEdgeStyle;html=1;" edge="1" source="4" target="5" parent="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-      </root>
-    </mxGraphModel>
-  </diagram>
-</mxfile>
-```
-
-## Output Filename Convention
-
-Default filename: `architecture.drawio`
-
-If the user names the diagram (e.g. "draw the data pipeline"), use a kebab-case name: `data-pipeline.drawio`.
-
-Always write the file using the Write tool, not as a code block only, so the user can open it directly in draw.io or VS Code with the draw.io extension.
+- New AWS icons release (2023-01-31) — https://github.com/jgraph/drawio/issues/3336
+- Finding outdated AWS icons in draw.io — https://kevinhakanson.com/2023-03-04-finding-outdated-aws-icons-in-drawio-files/
+- AWS Architecture Icons (official) — https://aws.amazon.com/architecture/icons/
+- Real diagrams used to extract verbatim style strings:
+  - https://github.com/Abhiek187/aws-shop/blob/main/architecture-diagram.drawio (CloudWatch `cloudwatch_2`, S3, IAM gradients)
+  - https://github.com/garystafford/draw-io/blob/master/ECR.drawio (Containers/ECR/ECS, ELB, Developer Tools)
+  - https://github.com/aws-samples/aws-organizations-tag-inventory/blob/main/architecture.drawio (Application Integration / Step Functions, EventBridge)
+- aws4 shape-name reference — https://github.com/DayuanJiang/next-ai-draw-io/blob/main/docs/shape-libraries/aws4.md

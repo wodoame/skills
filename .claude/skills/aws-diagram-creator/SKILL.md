@@ -27,10 +27,14 @@ These come from the user directly. Honor them by default on every diagram.
 5. **Edge labels never sit on the arrow.** Place each label off the line — above for
    horizontal segments, to the side for vertical ones. With decoupled text boxes (pref #4)
    this is automatic; if ever using real edge labels, add an `<mxPoint ... as="offset"/>`.
-6. **Rounded containers.** AWS Cloud, VPC, AZs, subnets, and logical boundaries use
-   `rounded=1;absoluteArcSize=1;arcSize=16-24`. Do **not** rely on `shape=mxgraph.aws4.group`
-   for the border — that shape draws square corners and ignores `rounded`. Use plain
-   rounded rectangles with the colors below.
+6. **Official AWS group containers.** AWS Cloud, Region, VPC, AZs, and subnets use the
+   **official draw.io AWS group shapes** (`shape=mxgraph.aws4.group` with the matching
+   `grIcon=mxgraph.aws4.group_*`). They carry the correct AWS corner icon and border color,
+   so prefer them over plain rectangles. **Roundness is NOT a priority** — these group shapes
+   draw square corners and that is fine; do **not** add `rounded`/`absoluteArcSize`/`arcSize`
+   to fight it. Keep `pointerEvents=0` so the group doesn't swallow clicks; children may stay
+   `parent="1"` (flat) since the group is purely visual. A purely *logical* boundary with no
+   AWS equivalent (e.g. "ECS Service") can still be a plain dashed rectangle.
 7. **Consolidate to reduce clutter.** Collapse repetitive resources into one labeled node
    (e.g. 6 interface VPC endpoints → one "VPC Endpoints" node per AZ listing the services).
 8. **Security groups as a compact legend box**, not separate shapes on the canvas, unless
@@ -79,13 +83,23 @@ cell's `shape`/`resIcon` onto the original cell and delete the placeholder. Flat
 
 ## Visual style reference
 
-**Containers** (plain rounded rectangles, label as separate text box):
-- AWS Cloud — `strokeColor=#232F3E;fillColor=none;arcSize=24`
-- VPC — `strokeColor=#8C4FFF;fillColor=none;arcSize=20`
-- Availability Zone — `dashed=1;dashPattern=8 6;strokeColor=#147EBA;fillColor=none;arcSize=18`
-- Public subnet — `strokeColor=#7AA116;fillColor=#E9F3E6;arcSize=16`
-- Private subnet — `strokeColor=#00A4A6;fillColor=#E6F6F7;arcSize=16`
-- Logical service boundary (e.g. ECS Service) — `dashed=1;dashPattern=6 4;strokeColor=#ED7100;fillColor=none;arcSize=16`
+**Containers** — use the **official AWS group shapes** (square corners are expected; do not
+round them — see pref #6). Keep the group `value=""` and put its title in a separate text box
+next to the corner icon (pref #4). Shared base style:
+
+```
+sketch=0;outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;verticalAlign=top;align=left;spacingLeft=30;<PER-CONTAINER>
+```
+
+Per-container `<PER-CONTAINER>` overrides (`grIcon` + colors):
+- AWS Cloud — `grIcon=mxgraph.aws4.group_aws_cloud_alt;strokeColor=#232F3E;fillColor=none;fontColor=#232F3E;dashed=0`
+- Region — `grIcon=mxgraph.aws4.group_region;strokeColor=#00A4A6;fillColor=none;fontColor=#00A4A6;dashed=1`
+- VPC — `grIcon=mxgraph.aws4.group_vpc;strokeColor=#8C4FFF;fillColor=none;fontColor=#8C4FFF;dashed=0`
+- Availability Zone — `grIcon=mxgraph.aws4.group_availability_zone;strokeColor=#147EBA;fillColor=none;fontColor=#147EBA;dashed=1`
+- Public subnet — `grIcon=mxgraph.aws4.group_public_subnet;strokeColor=#7AA116;fillColor=#E9F3E6;fontColor=#248814;dashed=0`
+- Private subnet — `grIcon=mxgraph.aws4.group_private_subnet;strokeColor=#00A4A6;fillColor=#E6F6F7;fontColor=#147EBA;dashed=0`
+- Security group — only if shown on canvas instead of the legend (pref #8): `grIcon=mxgraph.aws4.group_security_group;strokeColor=#DD3522;fillColor=none;fontColor=#DD3522;dashed=0`
+- Logical boundary with no AWS equivalent (e.g. ECS Service) — plain dashed rectangle, no group shape: `dashed=1;dashPattern=6 4;strokeColor=#ED7100;fillColor=none`
 
 **Icon category gradient pairs** — `fillColor` (DARK, bottom) / `gradientColor` (LIGHT, top),
 verified against current draw.io diagrams:
@@ -134,7 +148,7 @@ icons, then edges, then all text boxes (front). Keep `pageWidth`/`pageHeight` ge
     <mxGraphModel dx="1400" dy="900" grid="0" pageWidth="2000" pageHeight="1240" math="0" shadow="0">
       <root>
         <mxCell id="0" /><mxCell id="1" parent="0" />
-        <!-- containers (rounded rects) -->
+        <!-- containers (official AWS group shapes; square corners are fine) -->
         <!-- icons (value="") -->
         <!-- edges (value="", source/target by id) -->
         <!-- free-floating text boxes -->
@@ -144,8 +158,10 @@ icons, then edges, then all text boxes (front). Keep `pageWidth`/`pageHeight` ge
 </mxfile>
 ```
 
-A full reference implementation following all of the above lives in this user's project
-`BEM13-lab2-ecs-cicd/architecture.drawio` — consult it for concrete cell styles when in doubt.
+A full reference implementation lives in this user's project
+`BEM13-lab2-ecs-cicd/diagram/architecture.drawio` — consult it for concrete icon/edge/text
+cell styles. Note: its **containers predate pref #6** and still use plain rounded rectangles;
+for new diagrams use the official AWS group shapes above instead.
 
 ## Maintenance
 

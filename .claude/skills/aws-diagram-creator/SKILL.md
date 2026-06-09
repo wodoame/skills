@@ -37,8 +37,6 @@ These come from the user directly. Honor them by default on every diagram.
    AWS equivalent (e.g. "ECS Service") can still be a plain dashed rectangle.
 7. **Consolidate to reduce clutter.** Collapse repetitive resources into one labeled node
    (e.g. 6 interface VPC endpoints → one "VPC Endpoints" node per AZ listing the services).
-8. **Security groups as a compact legend box**, not separate shapes on the canvas, unless
-   the user asks otherwise.
 
 ## Use the CURRENT (2023) AWS resource icons — not the old flat ones
 
@@ -98,7 +96,7 @@ Per-container `<PER-CONTAINER>` overrides (`grIcon` + colors):
 - Availability Zone — `grIcon=mxgraph.aws4.group_availability_zone;strokeColor=#147EBA;fillColor=none;fontColor=#147EBA;dashed=1`
 - Public subnet — `grIcon=mxgraph.aws4.group_public_subnet;strokeColor=#7AA116;fillColor=#E9F3E6;fontColor=#248814;dashed=0`
 - Private subnet — `grIcon=mxgraph.aws4.group_private_subnet;strokeColor=#00A4A6;fillColor=#E6F6F7;fontColor=#147EBA;dashed=0`
-- Security group — only if shown on canvas instead of the legend (pref #8): `grIcon=mxgraph.aws4.group_security_group;strokeColor=#DD3522;fillColor=none;fontColor=#DD3522;dashed=0`
+- Security group (if shown on canvas) — `grIcon=mxgraph.aws4.group_security_group;strokeColor=#DD3522;fillColor=none;fontColor=#DD3522;dashed=0`
 - Logical boundary with no AWS equivalent (e.g. ECS Service) — plain dashed rectangle, no group shape: `dashed=1;dashPattern=6 4;strokeColor=#ED7100;fillColor=none`
 
 **Icon category gradient pairs** — `fillColor` (DARK, bottom) / `gradientColor` (LIGHT, top),

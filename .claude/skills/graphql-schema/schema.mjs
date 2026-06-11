@@ -94,11 +94,13 @@ fragment TypeRef on __Type {
 }
 `.trim();
 
+// Print a message to stderr and exit with the given code.
 function die(msg, code = 1) {
   process.stderr.write(msg + '\n');
   process.exit(code);
 }
 
+// Read a .env file into a key/value object, stripping quotes and comments.
 function parseEnv(p) {
   const out = {};
   if (!fs.existsSync(p)) return out;
@@ -120,12 +122,14 @@ function parseEnv(p) {
   return out;
 }
 
+// Exit if the given service name isn't one of the known downstream services.
 function assertService(service) {
   if (!SERVICES.includes(service)) {
     die(`Unknown service '${service}'. Valid: ${SERVICES.join(', ')}.`);
   }
 }
 
+// Load a service's cached introspection from disk, exiting if it's missing.
 function loadSchema(service) {
   const p = path.join(SCHEMA_DIR, `${service}.json`);
   if (!fs.existsSync(p)) {
@@ -138,6 +142,7 @@ function loadSchema(service) {
   return raw.__schema;
 }
 
+// Render an introspection type ref to SDL, unwrapping NON_NULL (!) and LIST ([]).
 function formatTypeRef(ref) {
   if (!ref) return '?';
   if (ref.kind === 'NON_NULL') return formatTypeRef(ref.ofType) + '!';
@@ -145,6 +150,7 @@ function formatTypeRef(ref) {
   return ref.name || '?';
 }
 
+// Render a field/operation's argument list as "(name: Type = default, ...)".
 function formatArgs(args) {
   if (!args || args.length === 0) return '';
   const parts = args.map((a) => {
@@ -154,10 +160,12 @@ function formatArgs(args) {
   return '(' + parts.join(', ') + ')';
 }
 
+// Render a single field/operation as "name(args): ReturnType".
 function formatField(field) {
   return `${field.name}${formatArgs(field.args)}: ${formatTypeRef(field.type)}`;
 }
 
+// Render a full type definition (object/input/enum/union/scalar) as one SDL line.
 function formatType(type) {
   switch (type.kind) {
     case 'OBJECT':
@@ -194,12 +202,14 @@ function formatType(type) {
   }
 }
 
+// Return the fields of a root type (Query/Mutation/Subscription) by its name.
 function rootTypeFields(schema, rootName) {
   if (!rootName) return [];
   const t = schema.types.find((x) => x.name === rootName);
   return t && t.fields ? t.fields : [];
 }
 
+// Group the schema's root operations into { query, mutation, subscription } fields.
 function rootFieldsByKind(schema) {
   return {
     query: rootTypeFields(schema, schema.queryType && schema.queryType.name),
@@ -211,6 +221,7 @@ function rootFieldsByKind(schema) {
   };
 }
 
+// Return user-defined types, excluding introspection (__) types and root operations.
 function userTypes(schema) {
   return schema.types.filter(
     (t) =>
@@ -221,6 +232,7 @@ function userTypes(schema) {
   );
 }
 
+// Edit distance between two strings, used to rank "did you mean" suggestions.
 function levenshtein(a, b) {
   const m = a.length, n = b.length;
   if (!m) return n;
@@ -237,6 +249,7 @@ function levenshtein(a, b) {
   return dp[m][n];
 }
 
+// Return the n closest candidate names to `name` by edit distance.
 function suggest(name, candidates, n = 3) {
   const lower = name.toLowerCase();
   return candidates
@@ -255,6 +268,7 @@ const KIND_ALIASES = {
   subscription: 'subscription',
 };
 
+// `list` command: print operation names, optionally filtered to one kind.
 function cmdList(args) {
   const [service, kind] = args;
   if (!service) die('Usage: list <service> [queries|mutations|subscriptions]');
@@ -285,6 +299,7 @@ function cmdList(args) {
   process.stdout.write(out.join('\n') + '\n');
 }
 
+// Resolve a name to an operation or type, trying exact then case-insensitive match.
 function findInSchema(schema, name) {
   const roots = rootFieldsByKind(schema);
   for (const kind of ['query', 'mutation', 'subscription']) {
@@ -303,6 +318,7 @@ function findInSchema(schema, name) {
   return null;
 }
 
+// `get` command: print one operation or type's signature, or suggest near-misses.
 function cmdGet(args) {
   const [service, name] = args;
   if (!service || !name) die('Usage: get <service> <name>');
@@ -327,6 +343,7 @@ function cmdGet(args) {
   }
 }
 
+// Map an introspection type kind to its SDL keyword (OBJECT -> "type", etc.).
 function typeKindLabel(kind) {
   switch (kind) {
     case 'OBJECT': return 'type';
@@ -339,6 +356,7 @@ function typeKindLabel(kind) {
   }
 }
 
+// `search` command: print operations and types whose names contain the keyword.
 function cmdSearch(args) {
   const [service, keyword] = args;
   if (!service || !keyword) die('Usage: search <service> <keyword>');
@@ -359,6 +377,7 @@ function cmdSearch(args) {
   process.stdout.write(out.join('\n') + '\n');
 }
 
+// Build a map of member name -> rendered signature for a type, for diffing.
 function memberMap(type) {
   const m = new Map();
   switch (type.kind) {
@@ -382,6 +401,7 @@ function memberMap(type) {
   return m;
 }
 
+// Diff one type's members across local/remote, returning +/~/- lines (or null if same).
 function diffType(local, remote) {
   if (local.kind !== remote.kind) {
     return {
@@ -402,6 +422,7 @@ function diffType(local, remote) {
   return lines.length ? { name: remote.name, lines } : null;
 }
 
+// Compare two schemas, bucketing differences into new/changed/removed ops and types.
 function diffSchemas(local, remote) {
   const out = {
     newOps: [], removedOps: [], changedOps: [],
@@ -437,6 +458,7 @@ function diffSchemas(local, remote) {
   return out;
 }
 
+// Format a diff result into a human-readable block, or an "up to date" line.
 function renderDiff(service, d) {
   const counts = [];
   const total =
@@ -470,6 +492,7 @@ function renderDiff(service, d) {
   return lines.join('\n');
 }
 
+// `diff` command: fetch live schema(s) and report drift vs the local cache (no write).
 async function cmdDiff(args) {
   let token = process.env.ARMS_INTROSPECTION_JWT || '';
   const rest = [];
@@ -508,6 +531,7 @@ async function cmdDiff(args) {
   if (failed) process.exit(1);
 }
 
+// POST the introspection query to a service URL and return its __schema, or throw.
 async function fetchIntrospection(url, token) {
   let res;
   try {
@@ -546,12 +570,14 @@ async function fetchIntrospection(url, token) {
   return json.data.__schema;
 }
 
+// Write a file atomically via a temp file + rename to avoid partial writes.
 function writeAtomic(p, content) {
   const tmp = p + '.tmp';
   fs.writeFileSync(tmp, content);
   fs.renameSync(tmp, p);
 }
 
+// Fetch one service's live schema and write it to the local cache; returns the path.
 async function updateOne(service, env, token) {
   const urlVar = SERVICE_ENV[service];
   const url = env[urlVar];
@@ -563,6 +589,7 @@ async function updateOne(service, env, token) {
   return out;
 }
 
+// `update` command: refresh the cached schema for one service or all of them.
 async function cmdUpdate(args) {
   let token = process.env.ARMS_INTROSPECTION_JWT || '';
   const rest = [];
@@ -594,6 +621,7 @@ async function cmdUpdate(args) {
   if (results.some((r) => r.includes('FAILED'))) process.exit(1);
 }
 
+// Print the command/usage help text.
 function usage() {
   process.stdout.write(
     [
@@ -610,6 +638,7 @@ function usage() {
   );
 }
 
+// Entry point: dispatch the first argv token to its command handler.
 async function main(argv) {
   const [cmd, ...rest] = argv;
   switch (cmd) {

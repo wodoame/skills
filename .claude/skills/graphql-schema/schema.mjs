@@ -1,11 +1,14 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const SCHEMA_DIR = path.join(__dirname, 'schemas');
-const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
+// Paths are anchored on the current working directory (the repo you run the
+// skill from), not on this file's location. This keeps the script symlink-safe:
+// the code can live in one canonical repo and be symlinked into others, while
+// each repo's .env and cached schemas/ stay local to it. Invoke from the repo
+// root, as the docs and error messages assume.
+const REPO_ROOT = process.cwd();
+const SCHEMA_DIR = path.join(REPO_ROOT, '.claude', 'skills', 'graphql-schema', 'schemas');
 const ENV_PATH = path.join(REPO_ROOT, '.env');
 
 const SERVICES = ['leaves', 'clocking', 'employee'];
@@ -356,6 +359,155 @@ function cmdSearch(args) {
   process.stdout.write(out.join('\n') + '\n');
 }
 
+function memberMap(type) {
+  const m = new Map();
+  switch (type.kind) {
+    case 'OBJECT':
+    case 'INTERFACE':
+      for (const f of type.fields || []) m.set(f.name, formatField(f));
+      break;
+    case 'INPUT_OBJECT':
+      for (const f of type.inputFields || []) {
+        const base = `${f.name}: ${formatTypeRef(f.type)}`;
+        m.set(f.name, f.defaultValue != null ? `${base} = ${f.defaultValue}` : base);
+      }
+      break;
+    case 'ENUM':
+      for (const v of type.enumValues || []) m.set(v.name, v.name);
+      break;
+    case 'UNION':
+      for (const t of type.possibleTypes || []) m.set(t.name, t.name);
+      break;
+  }
+  return m;
+}
+
+function diffType(local, remote) {
+  if (local.kind !== remote.kind) {
+    return {
+      name: remote.name,
+      lines: [`~ kind ${typeKindLabel(local.kind)} -> ${typeKindLabel(remote.kind)}`],
+    };
+  }
+  const lm = memberMap(local);
+  const rm = memberMap(remote);
+  const lines = [];
+  for (const [name, sig] of rm) {
+    if (!lm.has(name)) lines.push(`+ ${sig}`);
+    else if (lm.get(name) !== sig) lines.push(`~ ${sig}  (local: ${lm.get(name)})`);
+  }
+  for (const [name, sig] of lm) {
+    if (!rm.has(name)) lines.push(`- ${sig}`);
+  }
+  return lines.length ? { name: remote.name, lines } : null;
+}
+
+function diffSchemas(local, remote) {
+  const out = {
+    newOps: [], removedOps: [], changedOps: [],
+    newTypes: [], removedTypes: [], changedTypes: [],
+  };
+  const lr = rootFieldsByKind(local);
+  const rr = rootFieldsByKind(remote);
+  for (const kind of ['query', 'mutation', 'subscription']) {
+    const lmap = new Map((lr[kind] || []).map((f) => [f.name, formatField(f)]));
+    const rmap = new Map((rr[kind] || []).map((f) => [f.name, formatField(f)]));
+    for (const [name, sig] of rmap) {
+      if (!lmap.has(name)) out.newOps.push(`${kind}: ${sig}`);
+      else if (lmap.get(name) !== sig) {
+        out.changedOps.push(`${kind}: ${sig}  (local: ${lmap.get(name)})`);
+      }
+    }
+    for (const name of lmap.keys()) {
+      if (!rmap.has(name)) out.removedOps.push(`${kind}: ${name}`);
+    }
+  }
+  const ltypes = new Map(userTypes(local).map((t) => [t.name, t]));
+  const rtypes = new Map(userTypes(remote).map((t) => [t.name, t]));
+  for (const [name, rt] of rtypes) {
+    if (!ltypes.has(name)) out.newTypes.push(formatType(rt));
+    else {
+      const d = diffType(ltypes.get(name), rt);
+      if (d) out.changedTypes.push(d);
+    }
+  }
+  for (const [name, lt] of ltypes) {
+    if (!rtypes.has(name)) out.removedTypes.push(`${typeKindLabel(lt.kind)} ${name}`);
+  }
+  return out;
+}
+
+function renderDiff(service, d) {
+  const counts = [];
+  const total =
+    d.newOps.length + d.changedOps.length + d.removedOps.length +
+    d.newTypes.length + d.changedTypes.length + d.removedTypes.length;
+  if (total === 0) return `${service} — up to date with remote`;
+  if (d.newOps.length) counts.push(`${d.newOps.length} new op(s)`);
+  if (d.changedOps.length) counts.push(`${d.changedOps.length} changed op(s)`);
+  if (d.removedOps.length) counts.push(`${d.removedOps.length} removed op(s)`);
+  if (d.newTypes.length) counts.push(`${d.newTypes.length} new type(s)`);
+  if (d.changedTypes.length) counts.push(`${d.changedTypes.length} changed type(s)`);
+  if (d.removedTypes.length) counts.push(`${d.removedTypes.length} removed type(s)`);
+  const lines = [`${service} — ${counts.join(', ')} vs local`];
+  const section = (title, items) => {
+    if (!items.length) return;
+    lines.push('', title + ':');
+    for (const it of items) lines.push('  ' + it);
+  };
+  section('new operations', d.newOps);
+  section('new types', d.newTypes);
+  if (d.changedTypes.length) {
+    lines.push('', 'changed types:');
+    for (const t of d.changedTypes) {
+      lines.push('  ' + t.name + ':');
+      for (const l of t.lines) lines.push('    ' + l);
+    }
+  }
+  section('changed operations', d.changedOps);
+  section('removed operations', d.removedOps);
+  section('removed types', d.removedTypes);
+  return lines.join('\n');
+}
+
+async function cmdDiff(args) {
+  let token = process.env.ARMS_INTROSPECTION_JWT || '';
+  const rest = [];
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--token') token = args[++i] || '';
+    else rest.push(args[i]);
+  }
+  const [target] = rest;
+  if (!target) die('Usage: diff <service|all> [--token <jwt>]');
+  if (!token) die('Missing JWT. Export ARMS_INTROSPECTION_JWT or pass --token <jwt>.');
+  if (target !== 'all') assertService(target);
+  const env = parseEnv(ENV_PATH);
+  const targets = target === 'all' ? SERVICES : [target];
+  const blocks = [];
+  let failed = false;
+  for (const service of targets) {
+    const localPath = path.join(SCHEMA_DIR, `${service}.json`);
+    if (!fs.existsSync(localPath)) {
+      blocks.push(`${service} — no local schema; run 'update ${service}' first (all of remote is new)`);
+      failed = true;
+      continue;
+    }
+    try {
+      const local = JSON.parse(fs.readFileSync(localPath, 'utf8')).__schema;
+      const urlVar = SERVICE_ENV[service];
+      const url = env[urlVar];
+      if (!url) throw new Error(`Missing ${urlVar} in ${ENV_PATH}.`);
+      const remote = await fetchIntrospection(url, token);
+      blocks.push(renderDiff(service, diffSchemas(local, remote)));
+    } catch (e) {
+      blocks.push(`${service} — FAILED (${e.message})`);
+      failed = true;
+    }
+  }
+  process.stdout.write(blocks.join('\n\n') + '\n');
+  if (failed) process.exit(1);
+}
+
 async function fetchIntrospection(url, token) {
   let res;
   try {
@@ -450,6 +602,7 @@ function usage() {
       '  schema.mjs get <service> <name>',
       '  schema.mjs search <service> <keyword>',
       '  schema.mjs update <service|all> [--token <jwt>]',
+      '  schema.mjs diff <service|all> [--token <jwt>]',
       '',
       `Services: ${SERVICES.join(', ')}`,
       'JWT for update: env ARMS_INTROSPECTION_JWT or --token flag.',
@@ -468,6 +621,8 @@ async function main(argv) {
       return cmdSearch(rest);
     case 'update':
       return cmdUpdate(rest);
+    case 'diff':
+      return cmdDiff(rest);
     case '-h':
     case '--help':
     case 'help':

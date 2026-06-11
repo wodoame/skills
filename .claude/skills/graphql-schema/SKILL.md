@@ -25,6 +25,7 @@ schema list <service> [queries|mutations|subscriptions]
 schema get <service> <name>
 schema search <service> <keyword>
 schema update <service|all> [--token <jwt>]
+schema diff <service|all> [--token <jwt>]
 ```
 
 `get` resolves both operation names (queries/mutations/subscriptions) and type names (objects, inputs, enums, unions, scalars). Output is prefixed with the kind, e.g. `query: getEmployeeById(...)` or `type: Employee { ... }`.
@@ -65,6 +66,36 @@ schema get employee getEmployeeById
 schema get employee Employee
 # => type: type Employee { id: ID!; name: String!; department: Department }
 ```
+
+# Checking for remote changes
+
+`diff <service|all>` fetches the live introspection and compares it against your local cache **without overwriting it**. Use it to find out whether a downstream service has shipped schema changes you don't have yet, before deciding to `update`.
+
+It reports additions first (new operations, new types, new fields/enum values/input fields on existing types), then changes (signature changes, with the local value shown), then removals. Markers inside a changed type: `+` added member, `~` changed member, `-` removed member.
+
+```
+schema diff employee
+# => employee — 1 new op(s), 1 new type(s), 1 changed type(s) vs local
+#
+#    new operations:
+#      query: getEmployeeArchive(id: ID!): Employee
+#
+#    new types:
+#      type ArchiveEntry { id: ID!; archivedAt: String }
+#
+#    changed types:
+#      Employee:
+#        + nickname: String
+#        ~ name: String!  (local: name: String)
+
+schema diff all
+# => leaves — up to date with remote
+#    clocking — up to date with remote
+#    employee — 2 new op(s) vs local
+#    ...
+```
+
+If a service has no local schema yet, `diff` tells you to `update` first (everything would be new). Needs a JWT just like `update`.
 
 # Refreshing schemas
 

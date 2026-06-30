@@ -11,11 +11,12 @@ const REPO_ROOT = process.cwd();
 const SCHEMA_DIR = path.join(REPO_ROOT, '.claude', 'skills', 'graphql-schema', 'schemas');
 const ENV_PATH = path.join(REPO_ROOT, '.env');
 
-const SERVICES = ['leaves', 'clocking', 'employee'];
+const SERVICES = ['leaves', 'clocking', 'employee', 'ims'];
 const SERVICE_ENV = {
   leaves: 'LEAVES_SERVICE_GRAPHQL_URL',
   clocking: 'CLOCKING_SERVICE_GRAPHQL_URL',
   employee: 'EMPLOYEE_SERVICE_GRAPHQL_URL',
+  ims: 'IMS_SERVICE_GRAPHQL_URL',
 };
 
 const INTROSPECTION_QUERY = `
@@ -495,14 +496,16 @@ function renderDiff(service, d) {
 // `diff` command: fetch live schema(s) and report drift vs the local cache (no write).
 async function cmdDiff(args) {
   let token = process.env.ARMS_INTROSPECTION_JWT || '';
+  let cookie = '';
   const rest = [];
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--token') token = args[++i] || '';
+    else if (args[i] === '--cookie') cookie = args[++i] || '';
     else rest.push(args[i]);
   }
   const [target] = rest;
-  if (!target) die('Usage: diff <service|all> [--token <jwt>]');
-  if (!token) die('Missing JWT. Export ARMS_INTROSPECTION_JWT or pass --token <jwt>.');
+  if (!target) die('Usage: diff <service|all> [--token <jwt>] [--cookie <name=value>]');
+  if (!token && !cookie) die('Missing auth. Export ARMS_INTROSPECTION_JWT, pass --token <jwt>, or pass --cookie <name=value>.');
   if (target !== 'all') assertService(target);
   const env = parseEnv(ENV_PATH);
   const targets = target === 'all' ? SERVICES : [target];
@@ -520,7 +523,7 @@ async function cmdDiff(args) {
       const urlVar = SERVICE_ENV[service];
       const url = env[urlVar];
       if (!url) throw new Error(`Missing ${urlVar} in ${ENV_PATH}.`);
-      const remote = await fetchIntrospection(url, token);
+      const remote = await fetchIntrospection(url, token, cookie);
       blocks.push(renderDiff(service, diffSchemas(local, remote)));
     } catch (e) {
       blocks.push(`${service} — FAILED (${e.message})`);
@@ -532,15 +535,19 @@ async function cmdDiff(args) {
 }
 
 // POST the introspection query to a service URL and return its __schema, or throw.
-async function fetchIntrospection(url, token) {
+// Pass `cookie` (e.g. "access_token=<value>") instead of `token` for cookie-based auth.
+async function fetchIntrospection(url, token, cookie) {
   let res;
   try {
+    const headers = { 'Content-Type': 'application/json' };
+    if (cookie) {
+      headers['Cookie'] = cookie;
+    } else {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
     res = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
+      headers,
       body: JSON.stringify({ query: INTROSPECTION_QUERY }),
     });
   } catch (e) {
@@ -578,11 +585,11 @@ function writeAtomic(p, content) {
 }
 
 // Fetch one service's live schema and write it to the local cache; returns the path.
-async function updateOne(service, env, token) {
+async function updateOne(service, env, token, cookie) {
   const urlVar = SERVICE_ENV[service];
   const url = env[urlVar];
   if (!url) throw new Error(`Missing ${urlVar} in ${ENV_PATH}.`);
-  const schema = await fetchIntrospection(url, token);
+  const schema = await fetchIntrospection(url, token, cookie);
   if (!fs.existsSync(SCHEMA_DIR)) fs.mkdirSync(SCHEMA_DIR, { recursive: true });
   const out = path.join(SCHEMA_DIR, `${service}.json`);
   writeAtomic(out, JSON.stringify({ __schema: schema }));
@@ -592,18 +599,21 @@ async function updateOne(service, env, token) {
 // `update` command: refresh the cached schema for one service or all of them.
 async function cmdUpdate(args) {
   let token = process.env.ARMS_INTROSPECTION_JWT || '';
+  let cookie = '';
   const rest = [];
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--token') {
       token = args[++i] || '';
+    } else if (args[i] === '--cookie') {
+      cookie = args[++i] || '';
     } else {
       rest.push(args[i]);
     }
   }
   const [target] = rest;
-  if (!target) die('Usage: update <service|all> [--token <jwt>]');
-  if (!token) {
-    die('Missing JWT. Export ARMS_INTROSPECTION_JWT or pass --token <jwt>.');
+  if (!target) die('Usage: update <service|all> [--token <jwt>] [--cookie <name=value>]');
+  if (!token && !cookie) {
+    die('Missing auth. Export ARMS_INTROSPECTION_JWT, pass --token <jwt>, or pass --cookie <name=value>.');
   }
   const env = parseEnv(ENV_PATH);
   const targets = target === 'all' ? SERVICES : [target];
@@ -611,7 +621,7 @@ async function cmdUpdate(args) {
   const results = [];
   for (const s of targets) {
     try {
-      const out = await updateOne(s, env, token);
+      const out = await updateOne(s, env, token, cookie);
       results.push(`${s}: ok (${out})`);
     } catch (e) {
       results.push(`${s}: FAILED (${e.message})`);

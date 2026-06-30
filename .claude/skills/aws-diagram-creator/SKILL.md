@@ -66,11 +66,30 @@ renamed several icons with a `_2` suffix. Verified working choices:
 | IAM role        | `identity_and_access_management_iam`  | `shape=mxgraph.aws4.role` (flat icon, ~78×44, no resIcon) |
 | S3 bucket       | `simple_storage_service`              | `resIcon=mxgraph.aws4.s3`                             |
 | CloudWatch      | `cloudwatch`                          | `resIcon=mxgraph.aws4.cloudwatch_2`                  |
+| CloudWatch alarm| `cloudwatch_alarm` (blank tile here)  | `resIcon=mxgraph.aws4.cloudwatch_2` (gradient tile — see below) |
 | Auto Scaling    | `application_auto_scaling`            | `shape=mxgraph.aws4.auto_scaling2` (flat, no resIcon) |
+| ECS             | `elastic_container_service` (blank)   | `resIcon=mxgraph.aws4.ecs`                           |
+| ECR             | `elastic_container_registry` (blank)  | `resIcon=mxgraph.aws4.ecr`                           |
 
-Names confirmed to render fine as-is: `elastic_container_registry`, `fargate`, `eventbridge`,
-`codepipeline`, `codedeploy`, `application_load_balancer`, `nat_gateway`, `internet_gateway`,
-`endpoints`, `cloudwatch_alarm`.
+**This user's draw.io renders the SHORT (pre-2023) resIcon names, not the long 2023-refresh
+names.** Verified from their committed diagrams: `ecr`, `ecs`, `cloudwatch_2`, `cloudfront`,
+`rds`, `rds_proxy`, `elasticache`, `s3`, `fargate`, `secrets_manager`, `eventbridge`,
+`codepipeline`, `codedeploy`, `application_load_balancer`, `internet_gateway`, `endpoints` all
+render. The long names (`elastic_container_registry`, `elastic_container_service`,
+`cloudwatch_alarm`) render as **blank colored tiles** in their environment — do NOT use them.
+The gradient styling is unrelated to blanking; a blank tile is always a bad resIcon name.
+
+**User's preferred icons (use these by default):**
+- **ECS** — `resIcon=mxgraph.aws4.ecs`, Compute orange gradient
+  (`fillColor=#D05C17;gradientColor=#F78E04`), 52×52. Use the short name — the long
+  `elastic_container_service` renders blank here.
+- **ECR** — `resIcon=mxgraph.aws4.ecr`, same Compute orange gradient, 52×52. Short name only —
+  `elastic_container_registry` renders blank here.
+- **CloudWatch alarm** — the **gradient resourceIcon tile** `resIcon=mxgraph.aws4.cloudwatch_2`
+  with the Management & Governance pink gradient (`fillColor=#BC1356;gradientColor=#F34482;
+  gradientDirection=north`), `strokeColor=#ffffff`, 52×52. The user prefers a gradient tile over
+  the flat `shape=mxgraph.aws4.alarm` bell symbol; `cloudwatch_alarm` blanks, so `cloudwatch_2`
+  is the gradient tile that renders.
 
 When unsure whether an icon renders, keep the node `id` stable so attached edges/labels survive
 an icon swap. If one renders blank, tell the user and offer to let them drop the correct icon

@@ -1,11 +1,11 @@
 ---
 name: graphql-schema
-description: Look up downstream GraphQL schema details (operations, types, inputs, enums) for the leaves, clocking, and employee services without pulling full SDLs into context. Use whenever you need to know the shape of a downstream field, argument, or type before writing or debugging a proxy/resolver call.
+description: Look up downstream GraphQL schema details (operations, types, inputs, enums) for the leaves, clocking, employee, and ims services without pulling full SDLs into context. Use whenever you need to know the shape of a downstream field, argument, or type before writing or debugging a proxy/resolver call.
 ---
 
 # When to use
 
-- Before writing a `DataFetcher`, resolver, or `HttpGraphQlClient` call that talks to `leaves`, `clocking`, or `employee`.
+- Before writing a `DataFetcher`, resolver, or `HttpGraphQlClient` call that talks to `leaves`, `clocking`, `employee`, or `ims`.
 - The user asks "what does X return" / "what args does Y take" / "is there a query for Z" against a downstream service.
 - Debugging a federation/proxy call where the response shape doesn't match expectations.
 
@@ -16,7 +16,7 @@ description: Look up downstream GraphQL schema details (operations, types, input
 
 # Services
 
-`leaves` | `clocking` | `employee`
+`leaves` | `clocking` | `employee` | `ims`
 
 # Commands
 
@@ -37,7 +37,7 @@ export ARMS_INTROSPECTION_JWT=<your jwt>
 schema update all
 ```
 
-The JWT comes from the same SSO the gateway uses; one user token works against all three downstream services. The tool reads service URLs from the repo root `.env` (`LEAVES_SERVICE_GRAPHQL_URL`, `CLOCKING_SERVICE_GRAPHQL_URL`, `EMPLOYEE_SERVICE_GRAPHQL_URL`).
+The JWT comes from the same SSO the gateway uses; one user token works against all downstream services. The tool reads service URLs from the repo root `.env` (`LEAVES_SERVICE_GRAPHQL_URL`, `CLOCKING_SERVICE_GRAPHQL_URL`, `EMPLOYEE_SERVICE_GRAPHQL_URL`, `IMS_SERVICE_GRAPHQL_URL`).
 
 If `update` fails with 401/403, the token is stale — refresh it. You can also pass `--token <jwt>` per-call to override the env var.
 

@@ -123,7 +123,7 @@ function parseEnv(p) {
   return out;
 }
 
-// Exit if the given service name isn't one of the known downstream services.
+// Exit if the given service name isn't one of the known upstream services.
 function assertService(service) {
   if (!SERVICES.includes(service)) {
     die(`Unknown service '${service}'. Valid: ${SERVICES.join(', ')}.`);

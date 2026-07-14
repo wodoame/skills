@@ -1,6 +1,6 @@
 ---
 name: rest-api
-description: Look up REST endpoint details (paths, methods, parameters, request/response shapes, schemas) for the incident-management service without pulling the full OpenAPI spec into context. Use whenever you need to know the shape of a downstream endpoint before writing or debugging a service client call.
+description: Look up REST endpoint details (paths, methods, parameters, request/response shapes, schemas) for the incident-management service without pulling the full OpenAPI spec into context. Use whenever you need to know the shape of an upstream endpoint before writing or debugging a service client call.
 ---
 
 # When to use

@@ -10,12 +10,12 @@ description: Write a gateway-level GraphQL query or mutation with all arguments 
 
 # Don't use when
 
-- The user wants a query for a **downstream** service (leaves, clocking, employee, ims) — use the `graphql-schema` skill first to look up the operation/type shapes, then apply this format.
+- The user wants a query for an **upstream** service (leaves, clocking, employee, ims) — use the `graphql-schema` skill first to look up the operation/type shapes, then apply this format.
 - The user wants the query written with variables (the normal client-side convention) — just write it the standard way instead.
 
 # Format
 
-- Look up the operation in the gateway's local schema under `src/main/resources/graphql/*.graphqls` (or the downstream service's schema via `graphql-schema` if it's a proxied operation) to get the exact argument names, input types, and return type.
+- Look up the operation in the gateway's local schema under `src/main/resources/graphql/*.graphqls` (or the upstream service's schema via `graphql-schema` if it's a proxied operation) to get the exact argument names, input types, and return type.
 - Inline every argument directly in the operation body — no `query Foo($x: X)` header, no separate `variables` JSON.
 - For each input object argument, spell out its fields inline as a GraphQL object literal (`{ field: value, ... }`), recursing into nested input types the same way.
 - Use realistic placeholder values:

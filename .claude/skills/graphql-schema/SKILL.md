@@ -1,12 +1,12 @@
 ---
 name: graphql-schema
-description: Look up downstream GraphQL schema details (operations, types, inputs, enums) for the leaves, clocking, employee, and ims services without pulling full SDLs into context. Use whenever you need to know the shape of a downstream field, argument, or type before writing or debugging a proxy/resolver call.
+description: Look up upstream GraphQL schema details (operations, types, inputs, enums) for the leaves, clocking, employee, and ims services without pulling full SDLs into context. Use whenever you need to know the shape of an upstream field, argument, or type before writing or debugging a proxy/resolver call.
 ---
 
 # When to use
 
 - Before writing a `DataFetcher`, resolver, or `HttpGraphQlClient` call that talks to `leaves`, `clocking`, `employee`, or `ims`.
-- The user asks "what does X return" / "what args does Y take" / "is there a query for Z" against a downstream service.
+- The user asks "what does X return" / "what args does Y take" / "is there a query for Z" against an upstream service.
 - Debugging a federation/proxy call where the response shape doesn't match expectations.
 
 # Don't use when
@@ -37,7 +37,7 @@ export ARMS_INTROSPECTION_JWT=<your jwt>
 schema update all
 ```
 
-The JWT comes from the same SSO the gateway uses; one user token works against all downstream services. The tool reads service URLs from the repo root `.env` (`LEAVES_SERVICE_GRAPHQL_URL`, `CLOCKING_SERVICE_GRAPHQL_URL`, `EMPLOYEE_SERVICE_GRAPHQL_URL`, `IMS_SERVICE_GRAPHQL_URL`).
+The JWT comes from the same SSO the gateway uses; one user token works against all upstream services. The tool reads service URLs from the repo root `.env` (`LEAVES_SERVICE_GRAPHQL_URL`, `CLOCKING_SERVICE_GRAPHQL_URL`, `EMPLOYEE_SERVICE_GRAPHQL_URL`, `IMS_SERVICE_GRAPHQL_URL`).
 
 If `update` fails with 401/403, the token is stale — refresh it. You can also pass `--token <jwt>` per-call to override the env var.
 
@@ -69,7 +69,7 @@ schema get employee Employee
 
 # Checking for remote changes
 
-`diff <service|all>` fetches the live introspection and compares it against your local cache **without overwriting it**. Use it to find out whether a downstream service has shipped schema changes you don't have yet, before deciding to `update`.
+`diff <service|all>` fetches the live introspection and compares it against your local cache **without overwriting it**. Use it to find out whether an upstream service has shipped schema changes you don't have yet, before deciding to `update`.
 
 It reports additions first (new operations, new types, new fields/enum values/input fields on existing types), then changes (signature changes, with the local value shown), then removals. Markers inside a changed type: `+` added member, `~` changed member, `-` removed member.
 
@@ -101,7 +101,7 @@ If a service has no local schema yet, `diff` tells you to `update` first (everyt
 
 Run `update <service>` (or `update all`) when:
 
-- A downstream service has shipped a schema change.
+- An upstream service has shipped a schema change.
 - You get a "Not found" on a name you know should exist.
 - It's been a while and you're unsure if the cache is current.
 

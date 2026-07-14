@@ -14,6 +14,7 @@ A skill is a `SKILL.md` file placed under `.claude/skills/<skill-name>/`. When C
 | code-interviewer | `/code-interviewer` | AI-led interview to assess your understanding of a section of code |
 | coding-practice-coach | `/coding-practice-coach` | Hands-on coding challenges with review and feedback |
 | django-systems-architect | `/django-systems-architect` | Structured guidance for Django project architecture |
+| graphql-query | `/graphql-query` | Write a gateway-level GraphQL query/mutation with inputs inlined as literals (Postman-style) |
 | graphql-schema | `/graphql-schema` | Look up GraphQL schema details for downstream services |
 | springboot-systems-architect | `/springboot-systems-architect` | Structured guidance for Spring Boot project architecture |
 | system-design-interviewer | `/system-design-interviewer` | Practice system design interviews with AI feedback |

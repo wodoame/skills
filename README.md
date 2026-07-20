@@ -19,6 +19,7 @@ A skill is a `SKILL.md` file placed under `.claude/skills/<skill-name>/`. When C
 | springboot-systems-architect | `/springboot-systems-architect` | Structured guidance for Spring Boot project architecture |
 | system-design-interviewer | `/system-design-interviewer` | Practice system design interviews with AI feedback |
 | ticket-description-writer | `/ticket-description-writer` | Generate structured ticket descriptions (user story, description, acceptance criteria) |
+| ticket-implementation-summary | `/ticket-implementation-summary` | Write and post a QA-friendly implementation summary comment on a Jira ticket |
 | commit | `/commit` | Create a git commit following project conventions (no AI co-author attribution) |
 
 ## Adding a new skill

@@ -11,6 +11,7 @@ A skill is a `SKILL.md` file placed under `.claude/skills/<skill-name>/`. When C
 | Skill | Command | Purpose |
 |---|---|---|
 | aws-diagram-creator | `/aws-diagram-creator` | Create and edit AWS architecture diagrams as draw.io files |
+| architecture-diagram-creator | `/architecture-diagram-creator` | Create and edit general (non-AWS) architecture/network diagrams as draw.io files |
 | code-interviewer | `/code-interviewer` | AI-led interview to assess your understanding of a section of code |
 | coding-practice-coach | `/coding-practice-coach` | Hands-on coding challenges with review and feedback |
 | django-systems-architect | `/django-systems-architect` | Structured guidance for Django project architecture |
@@ -39,12 +40,16 @@ A skill is a `SKILL.md` file placed under `.claude/skills/<skill-name>/`. When C
    ```
 
 3. Update the table above.
-4. Sync to `~/.claude/skills/<skill-name>/` if you want the skill available globally (outside this repo).
+4. Push the change, then install it globally (see below) if you want it available outside this repo.
 
-## Syncing skills globally
+## Installing skills globally
 
-Skills in this repo are only active when Claude Code is opened in this directory. To make a skill available in any project, copy it to the global skills directory:
+Skills in this repo are only active when Claude Code is opened in this directory. To make one available in any project, install it with the [skills CLI](https://github.com/vercel-labs/skills) rather than copying files by hand:
 
 ```bash
-cp -r .claude/skills/<skill-name> ~/.claude/skills/
+npx skills add wodoame/skills --skill <skill-name> -a claude-code -g
 ```
+
+- `--skill <skill-name>` installs just that one skill; pass it multiple times for several, or use `--all` for every skill in this repo.
+- `-a claude-code` targets Claude Code (omit to be prompted, or add more `-a` flags for other agents).
+- `-g` installs to your user-global skills directory instead of the current project.

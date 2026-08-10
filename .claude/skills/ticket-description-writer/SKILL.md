@@ -21,13 +21,10 @@ Description:
 
 Acceptance Criteria:
 
-[Criterion 1]
-
-[Criterion 2]
-
-[Criterion 3]
-
-...
+- [Criterion 1]
+- [Criterion 2]
+- [Criterion 3]
+- ...
 ```
 
 ## Core Workflow
@@ -64,6 +61,7 @@ If the user provides a rough description upfront, extract what you can from it a
 
 ### Acceptance Criteria
 - Write as short, declarative statements (not "should" — just state the fact as if done).
+- Format each criterion as a bullet point (`- `).
 - Each criterion must be independently testable.
 - Cover the happy path, error/edge cases, and any non-functional requirements (security, performance) that are in scope.
 - Aim for 4–7 criteria. Fewer if the ticket is simple; more only if genuinely needed.
@@ -85,15 +83,11 @@ The app should integrate with the User Profile API to fetch user details such as
 
 Acceptance Criteria:
 
-User profile data is fetched successfully after login or app launch
-
-Profile information is displayed correctly in relevant screens
-
-API errors are handled with appropriate user feedback
-
-Data refresh reflects updates made on the backend
-
-Integration follows security and performance best practices
+- User profile data is fetched successfully after login or app launch
+- Profile information is displayed correctly in relevant screens
+- API errors are handled with appropriate user feedback
+- Data refresh reflects updates made on the backend
+- Integration follows security and performance best practices
 
 ---
 

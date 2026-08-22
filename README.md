@@ -18,6 +18,7 @@ A skill is a `SKILL.md` file placed under `.claude/skills/<skill-name>/`. When C
 | django-systems-architect | `/django-systems-architect` | Structured guidance for Django project architecture |
 | graphql-query | `/graphql-query` | Write a gateway-level GraphQL query/mutation with inputs inlined as literals (Postman-style) |
 | graphql-schema | `/graphql-schema` | Look up GraphQL schema details for downstream services |
+| obsidian-note | `/obsidian-note` | Document a topic or discussion as a note in your Obsidian vault (finds vault, confirms, writes matching house style) |
 | springboot-systems-architect | `/springboot-systems-architect` | Structured guidance for Spring Boot project architecture |
 | system-design-interviewer | `/system-design-interviewer` | Practice system design interviews with AI feedback |
 | ticket-description-writer | `/ticket-description-writer` | Generate structured ticket descriptions (user story, description, acceptance criteria) |

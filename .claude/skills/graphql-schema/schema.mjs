@@ -11,12 +11,13 @@ const REPO_ROOT = process.cwd();
 const SCHEMA_DIR = path.join(REPO_ROOT, '.claude', 'skills', 'graphql-schema', 'schemas');
 const ENV_PATH = path.join(REPO_ROOT, '.env');
 
-const SERVICES = ['leaves', 'clocking', 'employee', 'ims'];
+const SERVICES = ['leaves', 'clocking', 'employee', 'ims', 'notification'];
 const SERVICE_ENV = {
   leaves: 'LEAVES_SERVICE_GRAPHQL_URL',
   clocking: 'CLOCKING_SERVICE_GRAPHQL_URL',
   employee: 'EMPLOYEE_SERVICE_GRAPHQL_URL',
   ims: 'IMS_SERVICE_GRAPHQL_URL',
+  notification: 'NOTIFICATION_SERVICE_GRAPHQL_URL',
 };
 
 const INTROSPECTION_QUERY = `

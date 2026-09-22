@@ -11,6 +11,7 @@ A skill is a `SKILL.md` file placed under `.claude/skills/<skill-name>/`. When C
 | Skill | Command | Purpose |
 |---|---|---|
 | aws-diagram-creator | `/aws-diagram-creator` | Create and edit AWS architecture diagrams as draw.io files |
+| book-explorer | `/book-explorer` | Find where a topic/term lives in a cached book (PDF) via its own toc/glossary/index, without pulling whole chapters into context |
 | architecture-diagram-creator | `/architecture-diagram-creator` | Create and edit general (non-AWS) architecture/network diagrams as draw.io files |
 | code-interviewer | `/code-interviewer` | AI-led interview to assess your understanding of a section of code |
 | coding-practice-coach | `/coding-practice-coach` | Hands-on coding challenges with review and feedback |

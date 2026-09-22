@@ -298,20 +298,29 @@ function parseIndex(pages, startIdx, endIdx, headingPatterns) {
   const byTerm = new Map(); // term(lower) -> {term, pages:Set}
   for (let i = startIdx; i <= endIdx; i++) {
     for (const raw of pages[i].split('\n')) {
-      const line = raw.trim();
-      if (!line || lineMatchesAny(line, headingPatterns)) continue;
-      const nums = line.match(/\d+/g);
-      if (!nums) continue; // cross-reference lines ("see also X") carry no page numbers
-      const firstDigitAt = line.search(/\d/);
-      const term = line
-        .slice(0, firstDigitAt)
-        .replace(/[,\s]+$/, '')
-        .trim();
-      if (term.length < 2 || !/[A-Za-z]/.test(term)) continue;
-      const key = term.toLowerCase();
-      if (!byTerm.has(key)) byTerm.set(key, { term, pages: new Set() });
-      const entry = byTerm.get(key);
-      for (const n of nums) entry.pages.add(Number(n));
+      const trimmed = raw.trim();
+      if (!trimmed || lineMatchesAny(trimmed, headingPatterns)) continue;
+      // Back-of-book indexes are almost always typeset in two (or more)
+      // columns; pdftotext -layout reconstructs each PDF line as one text
+      // line with a wide gap between columns, so without splitting on that
+      // gap a right-column entry's page number gets misread as belonging to
+      // the left-column term on the same line.
+      for (const chunk of trimmed.split(/ {5,}/)) {
+        const line = chunk.trim();
+        if (!line) continue;
+        const nums = line.match(/\d+/g);
+        if (!nums) continue; // cross-reference lines ("see also X") carry no page numbers
+        const firstDigitAt = line.search(/\d/);
+        const term = line
+          .slice(0, firstDigitAt)
+          .replace(/[,\s]+$/, '')
+          .trim();
+        if (term.length < 2 || !/[A-Za-z]/.test(term)) continue;
+        const key = term.toLowerCase();
+        if (!byTerm.has(key)) byTerm.set(key, { term, pages: new Set() });
+        const entry = byTerm.get(key);
+        for (const n of nums) entry.pages.add(Number(n));
+      }
     }
   }
   return [...byTerm.values()].map((e) => ({

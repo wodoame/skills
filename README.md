@@ -13,6 +13,7 @@ A skill is a `SKILL.md` file placed under `.claude/skills/<skill-name>/`. When C
 | aws-diagram-creator | `/aws-diagram-creator` | Create and edit AWS architecture diagrams as draw.io files |
 | book-explorer | `/book-explorer` | Find where a topic/term lives in a cached book (PDF) via its own toc/glossary/index, without pulling whole chapters into context |
 | architecture-diagram-creator | `/architecture-diagram-creator` | Create and edit general (non-AWS) architecture/network diagrams as draw.io files |
+| code-flow-diagram | `/code-flow-diagram` | Build a local, clickable flow diagram of how a code path works, with file:line for every step (kept git-ignored in the repo's `.local/`) |
 | code-interviewer | `/code-interviewer` | AI-led interview to assess your understanding of a section of code |
 | coding-practice-coach | `/coding-practice-coach` | Hands-on coding challenges with review and feedback |
 | concept-interviewer | `/concept-interviewer` | Practice technical interviews on engineering concepts (defaults to backend, picks a topic if you have none) |

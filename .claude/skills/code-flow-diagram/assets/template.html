@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TITLE</title>
+<link rel="stylesheet" href="flow.css">
+<script>try { const t = localStorage.getItem('flow-diagrams-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch {}</script>
+</head>
+<body>
+<nav class="flows"></nav>
+<header>
+  <h1>HEADING: a plain sentence naming the journey, e.g. "How a notification travels from Kafka"</h1>
+  <p>ONE OR TWO SENTENCES: where it starts, where it ends, and what the columns mean. End with: Click any box for details and the code location.</p>
+  <div class="legend">
+    <!-- Keep only the entries this page uses. -->
+    <span><i class="sw" style="background:var(--topic-fill);border-color:var(--topic-stroke)"></i>Entry point</span>
+    <span><i class="sw" style="background:var(--main-fill);border-color:var(--main-stroke)"></i>Processing step</span>
+    <span><i class="sw" style="background:var(--dec-fill);border-color:var(--dec-stroke)"></i>Decision</span>
+    <span><i class="sw" style="background:var(--drop-fill);border-color:var(--drop-stroke);border-style:dashed"></i>Stops here</span>
+    <span><i class="sw" style="background:var(--retry-fill);border-color:var(--retry-stroke)"></i>Retry / deferred</span>
+    <span><i class="sw" style="background:var(--fail-fill);border-color:var(--fail-stroke)"></i>Error</span>
+    <span><i class="sw" style="background:var(--ok-fill);border-color:var(--ok-stroke)"></i>Delivery / result</span>
+    <span><i class="sw" style="background:var(--note-fill);border-color:var(--note-stroke);border-style:dotted"></i>Note</span>
+    <span><i class="ln" style="border-color:var(--fail-stroke);border-top-style:dashed"></i>Error thrown</span>
+    <span><i class="ln" style="border-color:var(--async);border-top-style:dotted"></i>Later / indirect</span>
+  </div>
+</header>
+
+<main>
+  <div class="diagram"><svg id="flow" role="img"></svg></div>
+  <aside id="panel" aria-live="polite"></aside>
+</main>
+
+<footer>Drawn from <code>BRANCH</code> @ <code>SHORT_SHA</code> on DATE. Line numbers drift as the code changes.</footer>
+
+<script src="flow-pages.js"></script>
+<script src="flow.js"></script>
+<script>
+// Node: { id, x, y, w, h, kind, title, sub: [lines], detail: { body: [paragraphs or '<ul>…</ul>' / '<pre>…</pre>'], where: ['path:line  symbol'] } }
+// Optional node fields: mono: true (monospace sub lines), align: 'left'.
+// kind: main | topic | dec | drop | fail | retry | ok | note
+const NODES = [
+  { id: 'start', x: 260, y: 20, w: 320, h: 50, kind: 'topic',
+    title: 'Where it starts', sub: ['one short line'],
+    detail: { body: ['What arrives here and from where.'], where: ['src/path/file.ts:10  symbol()'] } },
+  { id: 'step', x: 260, y: 100, w: 320, h: 56, kind: 'main',
+    title: 'A processing step', sub: ['one short line'],
+    detail: { body: ['What it does, and anything surprising about it.'], where: ['src/path/file.ts:42  symbol()'] } },
+];
+
+// Edge: { k: flow | drop | fail | async, p: [[x,y], ...], l?: 'label', lp?: [x,y], la?: 'start' | 'middle' | 'end' }
+const EDGES = [
+  { k: 'flow', p: [[420,70],[420,100]] },
+];
+
+renderFlow({
+  width: 1120, height: 200,
+  ariaLabel: 'ONE SENTENCE describing the whole diagram for screen readers',
+  nodes: NODES, edges: EDGES,
+  lanes: [],   // e.g. { x, y, w, h, fail: true } for a shaded failure column
+  labels: [],  // e.g. { x: 20, y: 170, text: 'Stops early' }
+  kindLabels: {},  // rename a kind in the panel, e.g. { fail: 'Dead letter' }
+  intro: `
+    <h2>Click any box</h2>
+    <div class="kind">Overview</div>
+    <p>One or two sentences on the overall flow.</p>
+    <p>Things worth knowing:</p>
+    <ul>
+      <li>The two to four non-obvious facts a newcomer would most likely get wrong.</li>
+    </ul>`,
+});
+</script>
+</body>
+</html>
